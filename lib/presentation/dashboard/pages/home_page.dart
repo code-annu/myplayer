@@ -5,9 +5,10 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import '../../../common/widget/permission/permission_request_widget.dart';
 import '../../../common/widget/button/primary_button.dart';
-import '../../../common/widget/video/video_card.dart';
+import '../../../common/widget/video/bucket_card.dart';
 import '../../../util/video_util.dart';
-import '../model/video.dart';
+import '../model/video_bucket.dart';
+import 'bucket_videos_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,7 +20,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool _hasPermission = false;
   bool _isLoading = false;
-  List<Video> _videos = [];
+  List<VideoBucket> _buckets = [];
 
   @override
   void initState() {
@@ -49,25 +50,25 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _loadVideos() async {
+  Future<void> _loadBuckets() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
       final videoUtil = VideoUtil();
-      final videos = await videoUtil.getVideos();
+      final buckets = await videoUtil.getVideoBuckets();
 
       if (mounted) {
         setState(() {
-          _videos = videos;
+          _buckets = buckets;
           _isLoading = false;
         });
 
         // Log the results for verification
-        print('Fetched ${videos.length} videos');
-        for (var video in videos.take(5)) {
-          print(video);
+        print('Fetched ${buckets.length} buckets');
+        for (var bucket in buckets) {
+          print(bucket);
         }
       }
     } catch (e) {
@@ -75,7 +76,7 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _isLoading = false;
         });
-        print('Error loading videos: $e');
+        print('Error loading buckets: $e');
       }
     }
   }
@@ -88,34 +89,30 @@ class _HomePageState extends State<HomePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _loadVideos,
+            onPressed: _isLoading ? null : _loadBuckets,
           ),
         ],
       ),
       body: _hasPermission
-          ? _buildVideoContent()
+          ? _buildBucketContent()
           : PermissionRequestWidget(onPermissionGranted: _checkPermission),
     );
   }
 
-  Widget _buildVideoContent() {
-    if (_isLoading && _videos.isEmpty) {
+  Widget _buildBucketContent() {
+    if (_isLoading && _buckets.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_videos.isEmpty) {
+    if (_buckets.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.video_library_outlined,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.folder_outlined, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'No videos found',
+              'No video folders found',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
@@ -128,30 +125,32 @@ class _HomePageState extends State<HomePage> {
               ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
             ),
             const SizedBox(height: 24),
-            PrimaryButton(onPressed: _loadVideos, text: 'Scan for Videos'),
+            PrimaryButton(onPressed: _loadBuckets, text: 'Scan for Videos'),
           ],
         ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: _loadVideos,
-      child: GridView.builder(
+      onRefresh: _loadBuckets,
+      child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.65,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 16,
-        ),
-        itemCount: _videos.length,
+        itemCount: _buckets.length,
         itemBuilder: (context, index) {
-          return VideoCard(
-            video: _videos[index],
-            onTap: () {
-              // TODO: Navigate to video player
-              print('Tapped on video: ${_videos[index].title}');
-            },
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: BucketCard(
+              bucket: _buckets[index],
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        BucketVideosPage(bucket: _buckets[index]),
+                  ),
+                );
+              },
+            ),
           );
         },
       ),

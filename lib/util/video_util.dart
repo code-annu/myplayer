@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:photo_manager/photo_manager.dart';
 import '../presentation/dashboard/model/video.dart';
+import '../presentation/dashboard/model/video_bucket.dart';
 
 class VideoUtil {
   Future<List<Video>> getVideos() async {
@@ -59,5 +60,33 @@ class VideoUtil {
       }
     }
     return videos;
+  }
+
+  Future<List<VideoBucket>> getVideoBuckets() async {
+    final videos = await getVideos();
+
+    // Group videos by parent folder
+    final Map<String, List<Video>> bucketMap = {};
+
+    for (var video in videos) {
+      if (!bucketMap.containsKey(video.parentFolder)) {
+        bucketMap[video.parentFolder] = [];
+      }
+      bucketMap[video.parentFolder]!.add(video);
+    }
+
+    // Convert map to list of VideoBucket objects
+    final List<VideoBucket> buckets = bucketMap.entries.map((entry) {
+      return VideoBucket(
+        id: entry.key.hashCode.toString(),
+        name: entry.key,
+        videos: entry.value,
+      );
+    }).toList();
+
+    // Sort buckets by name
+    buckets.sort((a, b) => a.name.compareTo(b.name));
+
+    return buckets;
   }
 }
